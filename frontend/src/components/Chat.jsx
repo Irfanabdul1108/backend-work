@@ -9,16 +9,24 @@ function Chat({ connectionRequestId, currentUser, otherUser, users }) {
 
   useEffect(() => {
     // Create a socket connection for this conversation
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io('https://backend-phi-rouge.vercel.app');
+
     setSocket(newSocket);
+    newSocket.on('newMessage', (msg) => {
+      if (msg.connectionRequest === connectionRequestId) {
+        setMessages(prev => [...prev, msg]);
+      }
+    });
     newSocket.emit('joinRoom', connectionRequestId);
     return () => newSocket.disconnect();
   }, [connectionRequestId]);
 
+
+  
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/chat/${connectionRequestId}`);
+        const res = await axios.get(`https://backend-phi-rouge.vercel.app/api/chat/${connectionRequestId}`);
         setMessages(res.data);
       } catch (err) {
         console.error('Error fetching chat messages:', err);
@@ -39,19 +47,28 @@ function Chat({ connectionRequestId, currentUser, otherUser, users }) {
     };
   }, [connectionRequestId, socket]);
 
+
+  
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
+    const newChatMessage = {
+      _id: Date.now().toString(),
+      connectionRequest: connectionRequestId,
+      sender: currentUser,
+      message: newMessage
+    };
+    setMessages(prev => [...prev, newChatMessage]);
+    setNewMessage('');
     try {
-      await axios.post('http://localhost:5000/api/chat/send', {
+      await axios.post('https://backend-phi-rouge.vercel.app/api/chat/send', {
         connectionRequest: connectionRequestId,
         sender: currentUser,
         message: newMessage
       });
-      setNewMessage('');
-      // Socket event will update messages automatically
     } catch (err) {
       console.error('Error sending chat message:', err);
     }
+
   };
 
   const getUserName = (id) => {

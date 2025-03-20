@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const http = require('http');
-require('dotenv').config();  // Corrected: load environment variables
-
+require('dotenv').config();
 const app = express();
 
 // Middleware
@@ -15,7 +14,7 @@ app.use(cors());
 const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, { 
-  cors: { origin: "*" } // Adjust for production if needed
+  cors: { origin: "*" } // Adjust for production
 });
 app.set('io', io);
 
@@ -39,7 +38,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Connect to MongoDB (make sure MONGO_URI is set in your .env file)
+// Connect to MongoDB (use a DB name without spaces)
 mongoose.connect(process.env.MONGO_URI, { 
   useNewUrlParser: true, 
   useUnifiedTopology: true 
@@ -48,7 +47,7 @@ mongoose.connect(process.env.MONGO_URI, {
 .catch(err => console.error("MongoDB connection error:", err));
 
 // Import routes
-const connectionRoutes = require('./routes/connection');
+const connectionRoutes = require('../routes/connection');
 app.use('/api', connectionRoutes);
 
 const PORT = process.env.PORT || 5000;

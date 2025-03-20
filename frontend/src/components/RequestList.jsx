@@ -7,7 +7,7 @@ function RequestList({ userId, setSelectedConnectionId, users, socket }) {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/connection-requests/${userId}`);
+        const res = await axios.get(`https://backend-phi-rouge.vercel.app/api/connection-requests/${userId}`);
         setRequests(res.data);
       } catch (err) {
         console.error('Error fetching connection requests:', err);
@@ -37,7 +37,7 @@ function RequestList({ userId, setSelectedConnectionId, users, socket }) {
 
   const acceptRequest = async (requestId, fromUser, toUser) => {
     try {
-      await axios.post('http://localhost:5000/api/connection-request/accept', { requestId });
+      await axios.post('https://backend-phi-rouge.vercel.app/api/connection-request/accept', { requestId });
       setRequests(requests.filter(req => req._id !== requestId));
       const otherUserId = userId === fromUser ? toUser : fromUser;
       setSelectedConnectionId({ id: requestId, otherUser: otherUserId });

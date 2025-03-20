@@ -7,7 +7,7 @@ function ChatList({ currentUser, setSelectedConnection, users }) {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/chats/${currentUser}`);
+        const res = await axios.get(`https://backend-phi-rouge.vercel.app/api/chats/${currentUser}`);
         setChats(res.data);
       } catch (err) {
         console.error("Error fetching chats:", err);

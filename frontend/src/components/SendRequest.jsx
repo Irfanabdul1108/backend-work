@@ -11,7 +11,7 @@ function SendRequest({ currentUser, users }) {
       return;
     }
     try {
-      const res = await axios.post('http://localhost:5000/api/connection-request', { 
+      const res = await axios.post('https://backend-phi-rouge.vercel.app/api/connection-request', { 
         fromUser: currentUser, 
         toUser, 
         message 

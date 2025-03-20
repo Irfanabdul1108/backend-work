@@ -22,7 +22,7 @@ function App() {
 
   // Create and maintain a global socket connection
   useEffect(() => {
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io('https://backend-phi-rouge.vercel.app');
     // Join the room with the current user's ID for notifications
     newSocket.emit('joinUser', currentUser);
     setSocket(newSocket);
