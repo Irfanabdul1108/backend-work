@@ -33,10 +33,32 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined conversation room ${room}`);
   });
 
+  socket.on('sendMessage', (msg) => {
+    io.to(msg.connectionRequest).emit('newMessage', msg);
+  });
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Connect to MongoDB (use a DB name without spaces)
 mongoose.connect(process.env.MONGO_URI, { 

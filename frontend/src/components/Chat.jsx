@@ -1,91 +1,116 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+
+const SOCKET_URL = 'https://backend-phi-rouge.vercel.app';
+const API_URL = `${SOCKET_URL}/api/chat`;
 
 function Chat({ connectionRequestId, currentUser, otherUser, users }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const connectionRequestIdRef = useRef(connectionRequestId);
 
+  // Update ref when connectionRequestId changes
   useEffect(() => {
-    // Create a socket connection for this conversation
-    const newSocket = io('https://backend-phi-rouge.vercel.app');
-
-    setSocket(newSocket);
-    newSocket.on('newMessage', (msg) => {
-      if (msg.connectionRequest === connectionRequestId) {
-        setMessages(prev => [...prev, msg]);
-      }
-    });
-    newSocket.emit('joinRoom', connectionRequestId);
-    return () => newSocket.disconnect();
+    connectionRequestIdRef.current = connectionRequestId;
   }, [connectionRequestId]);
 
-
-  
+  // Handle socket connection and messages
   useEffect(() => {
+    const initializeSocket = () => {
+      if (!socketRef.current) {
+        socketRef.current = io(SOCKET_URL, {
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 3000,
+        });
+
+        socketRef.current.on('connect', () => {
+          console.log('Socket connected');
+          socketRef.current.emit('joinRoom', connectionRequestIdRef.current);
+        });
+
+        socketRef.current.on('newMessage', (msg) => {
+          if (msg.connectionRequest === connectionRequestIdRef.current) {
+            setMessages(prev => [...prev, msg]);
+          }
+        });
+      }
+    };
+
     const fetchMessages = async () => {
       try {
-        const res = await axios.get(`https://backend-phi-rouge.vercel.app/api/chat/${connectionRequestId}`);
-        setMessages(res.data);
+        const { data } = await axios.get(`${API_URL}/${connectionRequestId}`);
+        setMessages(data);
       } catch (err) {
         console.error('Error fetching chat messages:', err);
       }
     };
 
     fetchMessages();
+    initializeSocket();
 
-    if (socket) {
-      socket.on('newMessage', (msg) => {
-        if (msg.connectionRequest === connectionRequestId) {
-          setMessages(prev => [...prev, msg]);
-        }
-      });
-    }
     return () => {
-      if (socket) socket.off('newMessage');
+      if (socketRef.current) {
+        socketRef.current.off('newMessage');
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
-  }, [connectionRequestId, socket]);
+  }, [connectionRequestId]);
 
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
-    const newChatMessage = {
+  
+    // Optimistic update
+    const tempMessage = {
       _id: Date.now().toString(),
       connectionRequest: connectionRequestId,
       sender: currentUser,
-      message: newMessage
+      message: newMessage,
+      createdAt: new Date()
     };
-    setMessages(prev => [...prev, newChatMessage]);
+    
+    setMessages(prev => [...prev, tempMessage]);
     setNewMessage('');
+  
     try {
-      await axios.post('https://backend-phi-rouge.vercel.app/api/chat/send', {
+      socketRef.current.emit('sendMessage', {
         connectionRequest: connectionRequestId,
         sender: currentUser,
         message: newMessage
       });
     } catch (err) {
       console.error('Error sending chat message:', err);
+      // Rollback optimistic update if needed
+      setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
     }
-
   };
 
-  const getUserName = (id) => {
-    const user = users.find(u => u.id === id);
-    return user ? user.name : id;
-  };
+  const getUserName = (id) => users.find((u) => u.id === id)?.name || id;
 
   return (
     <div>
       <h2>Chat</h2>
-      <div style={{
-        border: '1px solid #ccc', 
-        padding: '10px', 
-        height: '300px', 
-        overflowY: 'scroll'
-      }}>
-        {messages.map(msg => (
+      <div
+        ref={chatContainerRef}
+        style={{
+          border: '1px solid #ccc',
+          padding: '10px',
+          height: '300px',
+          overflowY: 'scroll',
+        }}
+      >
+        {messages.map((msg) => (
           <p
             key={msg._id}
             style={{
@@ -94,7 +119,7 @@ function Chat({ connectionRequestId, currentUser, otherUser, users }) {
               padding: '5px',
               borderRadius: '5px',
               maxWidth: '60%',
-              margin: msg.sender === currentUser ? '5px auto 5px 5px' : '5px 5px 5px auto'
+              margin: msg.sender === currentUser ? '5px auto 5px 5px' : '5px 5px 5px auto',
             }}
           >
             <strong>{msg.sender === currentUser ? 'You' : getUserName(otherUser)}:</strong> {msg.message}
@@ -103,8 +128,9 @@ function Chat({ connectionRequestId, currentUser, otherUser, users }) {
       </div>
       <textarea
         value={newMessage}
-        onChange={e => setNewMessage(e.target.value)}
+        onChange={(e) => setNewMessage(e.target.value)}
         placeholder="Type your message here..."
+        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
       />
       <button onClick={sendMessage}>Send Message</button>
     </div>

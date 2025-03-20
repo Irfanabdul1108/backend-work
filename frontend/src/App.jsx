@@ -20,15 +20,6 @@ function App() {
   const [selectedConnection, setSelectedConnection] = useState(null);
   const [socket, setSocket] = useState(null);
 
-  // Create and maintain a global socket connection
-  useEffect(() => {
-    const newSocket = io('https://backend-phi-rouge.vercel.app');
-    // Join the room with the current user's ID for notifications
-    newSocket.emit('joinUser', currentUser);
-    setSocket(newSocket);
-
-    return () => newSocket.disconnect();
-  }, [currentUser]);
 
   return (
     <div>
